@@ -12,7 +12,9 @@ import { Html5Qrcode } from "html5-qrcode";
 import TomSelect from "tom-select";
 import "tom-select/dist/css/tom-select.css";
 import Swal from "sweetalert2";
-import Select from 'react-select'; 
+import Select from 'react-select';
+import { IonAlert } from '@ionic/react';
+import type { AlertButton } from '@ionic/core'; 
 
 interface Evento {
   id_evento: number;
@@ -160,6 +162,59 @@ const [manualUserId, setManualUserId] = useState<number | null>(null);
 
   const [allowedProject, setAllowedProject] = useState<string | null>(null);
 
+
+
+  //  debajo de tus useState existentes
+const [ionicAlert, setIonicAlert] = useState<{
+  isOpen: boolean;
+  header?: string;
+  message?: string;
+  buttons: (string | AlertButton)[];
+}>({ isOpen: false, header: '', message: '', buttons: ['Aceptar'] });
+
+// 🔔 Alerta simple (OK)
+const presentAlert = (message: string, header = 'Información'): Promise<void> =>
+  new Promise((resolve) => {
+    setIonicAlert({
+      isOpen: true,
+      header,
+      message,
+      buttons: [
+        {
+          text: 'Aceptar',
+          handler: () => resolve(),
+        },
+      ],
+    });
+  });
+
+//  Confirmación (Cancelar / Aceptar)
+const presentConfirm = (
+  message: string,
+  header = 'Confirmar',
+  okText = 'Aceptar',
+  cancelText = 'Cancelar'
+): Promise<boolean> =>
+  new Promise((resolve) => {
+    setIonicAlert({
+      isOpen: true,
+      header,
+      message,
+      buttons: [
+        {
+          text: cancelText,
+          role: 'cancel',
+          handler: () => resolve(false),
+        },
+        {
+          text: okText,
+          handler: () => resolve(true),
+        },
+      ],
+    });
+  });
+
+
   useEffect(() => {
     const fetchDatabaseContent = async () => {
       const savedDb = await getFromIndexedDB();
@@ -214,10 +269,10 @@ const [manualUserId, setManualUserId] = useState<number | null>(null);
           directory: Directory.Documents,
         });
 
-        alert('Archivo descargado exitosamente, busque el archivo en almacenamiento Documents');
+       // alert('Archivo descargado exitosamente, busque el archivo en almacenamiento Documents');
       } catch (error) {
         console.error('Error al guardar el archivo:', error);
-        alert('Error al guardar el archivo');
+      //  alert('Error al guardar el archivo');
       }
     } else {
       const link = document.createElement('a');
@@ -272,14 +327,16 @@ useEffect(() => {
               const token = urlParams.get("token");
 
               if (!id_usuario || !id_evento || !token) {
-                alert("QR inválido");
+               // alert("QR inválido");
+               await presentAlert("QR inválido");
                 return;
               }
 
               setDecodedData({ id_usuario, id_evento, token, source: 'qr' });
               setShowCursoModal(true);
             } catch (error) {
-              alert("❌ QR inválido o mal formado");
+              //alert("❌ QR inválido o mal formado");
+              await presentAlert("❌ QR inválido o mal formado");
             }
           },
           () => {}
@@ -348,8 +405,7 @@ useEffect(() => {
 const onSubmitDocumento = async (e?: React.FormEvent) => {
   e?.preventDefault();
   const doc = (docInput || '').trim();
-  //if (!doc) { alert('Digita la cédula'); return; }
-  //if (!db) { alert('BD no cargada'); return; }
+
 
   const safeDoc = doc.replace(/'/g, "''");
 
@@ -362,7 +418,7 @@ const onSubmitDocumento = async (e?: React.FormEvent) => {
   `);
 
   const rowU = resU?.[0]?.values?.[0];
-  if (!rowU) { alert('Usuario no encontrado'); return; }
+  if (!rowU) { await presentAlert('Usuario no encontrado'); return; }
 
   const colsU = resU[0].columns;
   const userObj: any = {};
@@ -422,7 +478,8 @@ const onSubmitEventoSeleccionado = () => {
 
 const registrarAsistencia = async () => {
   if (cursosFiltrados.length > 0 && !selectedCurso) {
-    alert("Seleccione una actividad.");
+    //alert("Seleccione una actividad.");
+    await presentAlert("Seleccione una actividad.");
     return;
   }
 
@@ -469,13 +526,15 @@ const registrarAsistencia = async () => {
     setShowCursoModal(false);
     setSelectedCurso("");
     saveDatabase();
-    alert("✅ Asistencia registrada correctamente");
+   // alert("✅ Asistencia registrada correctamente");
+   await presentAlert("✅ Asistencia registrada correctamente");
      setShowFlowModal(false);   
     fetchAsistentesEvento();
     fetchEventos();
   } catch (error) {
     console.error("❌ Error al registrar asistencia:", error);
-    alert("Ocurrió un error al registrar la asistencia.");
+   // alert("Ocurrió un error al registrar la asistencia.");
+   await presentAlert("Ocurrió un error al registrar la asistencia.");
   }
 };
 
@@ -1137,7 +1196,7 @@ const localDate = () => localDateTime().slice(0, 10); // YYYY-MM-DD
                   setDecodedData(null);
                   return;
                 }
-                if (!db) { alert('BD no cargada'); return; }
+                if (!db) { await presentAlert('BD no cargada'); return; }
 
                 const safeDoc = doc.replace(/'/g, "''");
 
@@ -1158,7 +1217,7 @@ const localDate = () => localDateTime().slice(0, 10); // YYYY-MM-DD
                   setSelectedEvent(null);
                   setSelectedCurso('');
                   setDecodedData(null);
-                  alert('Usuario no encontrado');
+                  await presentAlert('Usuario no encontrado');
                   return;
                 }
 
@@ -1781,6 +1840,14 @@ const tieneActividades = selectedEvent
           ) : ''}
 
         </>}
+        <IonAlert
+            isOpen={ionicAlert.isOpen}
+            header={ionicAlert.header}
+            message={ionicAlert.message}
+            buttons={ionicAlert.buttons}
+            onDidDismiss={() => setIonicAlert((a) => ({ ...a, isOpen: false }))}
+          />
+
     </IonPage>
     
   );
